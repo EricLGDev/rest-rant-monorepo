@@ -38,23 +38,66 @@ router.get('/:placeId', async (req, res) => {
         return res.status(403).json({
             message: 'You are not allowed to add a place'
         })
-    }})
+    if (isNaN(placeId)) {
+        res.status(404).json({ message: `Invalid id "${placeId}"` })
+    } else {
+        const place = await Place.findOne({
+            where: { placeId: placeId },
+            include: {
+                association: 'comments',
+                include: 'author'
+            }
+        })
+        if (!place) {
+            res.status(404).json({ message: `Could not find place with id "${placeId}"` })
+        } else {
+            res.json(place)
+        }
+    }
+}})
 
 router.put('/:placeId', async (req, res) => {
+    if(req.currentUser?.role !== 'admin'){
+        return res.status(403).json({ message: 'You are not allowed to edit places'})
+    }
     let placeId = Number(req.params.placeId)
-    if (req.currentUser?.role !== 'admin') {
-        return res.status(403).json({
-            message: 'You are not allowed to add a place'
+    if (isNaN(placeId)) {
+        res.status(404).json({ message: `Invalid id "${placeId}"` })
+    } else {
+        const place = await Place.findOne({
+            where: { placeId: placeId },
         })
-    }})
+        if (!place) {
+            res.status(404).json({ message: `Could not find place with id "${placeId}"` })
+        } else {
+            Object.assign(place, req.body)
+            await place.save()
+            res.json(place)
+        }
+    }
+})
 
 router.delete('/:placeId', async (req, res) => {
+    if(req.currentUser?.role !== 'admin'){
+        return res.status(403).json({ message: 'You are not allowed to delete places'})
+    }
     let placeId = Number(req.params.placeId)
-    if (req.currentUser?.role !== 'admin') {
-        return res.status(403).json({
-            message: 'You are not allowed to add a place'
+    if (isNaN(placeId)) {
+        res.status(404).json({ message: `Invalid id "${placeId}"` })
+    } else {
+        const place = await Place.findOne({
+            where: {
+                placeId: placeId
+            }
         })
-    }})
+        if (!place) {
+            res.status(404).json({ message: `Could not find place with id "${placeId}"` })
+        } else {
+            await place.destroy()
+            res.json(place)
+        }
+    }
+})
 
 router.post('/:placeId/comments', async (req, res) => {
     const placeId = Number(req.params.placeId)
